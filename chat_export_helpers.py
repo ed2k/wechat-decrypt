@@ -155,17 +155,40 @@ def _extract_transfer_extras(content):
     return out or None
 
 
-def _extract_content(local_id, local_type, content, ct, chat_username, chat_display_name):
+def _extract_content(local_id, local_type, content, ct, chat_username, chat_display_name, is_group):
     """Return (rendered_text, extras_dict). Either may be None.
 
     extras carries structured fields for non-text message types where caller
     wants more than the human-readable string (currently: transfer). Future
-    additions (video号 metadata, merged-forward expansion, …) can flow through
+    additions (视频号 metadata, merged-forward expansion, …) can flow through
     the same channel without changing the caller signature.
     """
     content = mcp_server._decompress_content(content, ct)
     if content is None:
         return None, None
+
+    base, _ = mcp_server._split_msg_type(local_type)
+    if base == 1:
+        return (content or ""), None
+    if base == 43:
+        return _format_video_message(content), None
+    if base == 47:
+        return _format_sticker_message(content), None
+    if base == 49:
+        _, cleaned = mcp_server._parse_message_content(content, local_type, is_group)
+        rendered = mcp_server._format_app_message_text(
+            cleaned, local_type, is_group, chat_username, chat_display_name, {}
+        )
+        transfer = _extract_transfer_extras(content)
+        extras = {'type': 'transfer', 'transfer': transfer} if transfer else None
+        return rendered, extras
+    if base == 50:
+        return mcp_server._format_voip_message_text(content), None
+    if base == 10000:
+        return _format_system_message(content), None
+    if base == 10002:
+        return "[撤回消息]", None
+    return None, None
 
     base, _ = mcp_server._split_msg_type(local_type)
     if base == 1:

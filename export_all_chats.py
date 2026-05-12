@@ -63,7 +63,7 @@ def export_one(username, output_dir, names):
         sender = _resolve_sender(row, ctx, names, id_to_username)
         type_str = _msg_type_str(local_type)
         rendered, extras = _extract_content(
-            local_id, local_type, content, ct, username, display_name
+            local_id, local_type, content, ct, username, display_name, ctx["is_group"]
         )
 
         msg = {"local_id": local_id, "timestamp": create_time, "sender": sender}
